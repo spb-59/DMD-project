@@ -2,13 +2,15 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.metrics import classification_report, plot_confusion_matrix
+from sklearn.metrics import classification_report
+from sklearn.metrics import ConfusionMatrixDisplay
+
 
 
 
 def runModel():
-    Test = pd.read_csv('/home/senume/Project/MIS/mis-ECG_analysis_DMD/FEATURE_EXTRACTION/HODMD Paper/Features_Beat_Bundle branch block.csv')
-    control = pd.read_csv('/home/senume/Project/MIS/mis-ECG_analysis_DMD/FEATURE_EXTRACTION/HODMD Paper/Features_Beat_Health Control.csv')
+    Test = pd.read_csv('features/AFIB.csv')
+    control = pd.read_csv('features/SR.csv')
 
     Test = Test.dropna()
     control = control.dropna()
@@ -22,8 +24,10 @@ def runModel():
     control.insert(len(control.columns),"Label", control_Label)
 
     DATASET = pd.concat([control, Test], ignore_index= True)
-    X = DATASET.drop(["name", "Label"], axis =1)
+    X = DATASET.drop(["Label"], axis =1)
     Y = DATASET["Label"]
+
+    print(X,Y)
 
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, stratify= Y)
 
@@ -71,10 +75,13 @@ def RF(X_tr, Y_tr, X_te, Y_te):
     rf_pred = rf_model.predict(X_te)
 
     # Plot confusion matrix
-    plot_confusion_matrix(Y_te, rf_pred, display_labels=['Class 0', 'Class 1'])
+    ConfusionMatrixDisplay.from_estimator(rf_model,X_te,Y_te)
     
     # Classification Report
     print("Classification Report: Random Forest")
     print(classification_report(Y_te, rf_pred, digits=2))
     with open('results.txt','a') as f:
         f.write(classification_report(Y_te, rf_pred, digits=2))
+
+
+runModel()
