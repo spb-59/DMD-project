@@ -5,13 +5,14 @@ import numpy as np
 from wfdb.io import rdrecord
 from wfdb import Record
 import pydmd as dmd
+import multiprocessing as mp
 
 
-path="physionet-data/processed1"
+path="processed1"
 
 
 def featureExtract():
-    lg.info("File paths extracted")
+
     recordPath=[]
     names=[]
 
@@ -31,19 +32,28 @@ def featureExtract():
 
                 recordPath.append(record_path)
 
-    for record in recordPath:
-        recordSig:Record=rdrecord(record)
-        features=extract(recordSig.p_signal)
-        print(features)
-        writeFile(features,recordSig.comments)
+    num_workers = 4
+    with mp.Pool(num_workers) as pool:
+        pool.map(process_record, recordPath)
 
-
+def process_record(record_path):
+    try:
+        recordSig = rdrecord(record_path)
+        lg.info("Starting DMD for record: %s", record_path)
+        
+        features = extract(recordSig.p_signal)
+        
+        writeFile(features, recordSig.comments)
+        
+        lg.info("Finished extracting for record: %s", record_path)
+    except Exception as e:
+        lg.error("Error processing record %s: %s", record_path, e)
 
 def extract(signal:np.ndarray):
 
 
     # Get the signals augumented
-    signal=AugMat(signal.T,300)
+    signal=AugMat(signal.T,200)
 
 
     #fit the DMD model
@@ -55,7 +65,7 @@ def extract(signal:np.ndarray):
     modes=DMD.modes
 
     #restack the modes to match the 12 leads
-    restacked= modes.reshape(12, 300, -1).mean(axis=1)
+    restacked= modes.reshape(12, 200, -1).mean(axis=1)
 
     #get lambda U for unstable S for stable
     Lambda_ind_u = np.where(np.abs(eigs) > 1)
@@ -89,24 +99,30 @@ def extract(signal:np.ndarray):
     M_u = np.sum(np.abs(Pho_u), axis=1)/numU 
     P_u = np.sum(np.angle(Pho_u-np.angle(Pho_u[0])), axis=1)/numU
 
-    return f"{R_N},{R_M},{R_P},{Lam_min},{Lam_max},{M_s},{P_s},{M_u},{P_u}\n"
+    return f"{str(R_N)},{str(R_M)},{str(R_P)},{str(Lam_min)},{str(Lam_max)},{str(M_s)},{str(P_s)},{str(M_u)},{str(P_u)}\n"
 
 
 
 def writeFile(features,comments):
     for comment in comments:
+        file_path = os.path.join("features", f"{comment}.csv")
+        
+        # Print the comment for debugging
         print(comment)
-        exist=True
-        if not os.path.exists(comment+".csv"):
-            exist=False
+        
+        # Determine if the file exists
+        file_exists = os.path.exists(file_path)
+        
+        # Open the file in append mode
+        with open(file_path, "a") as f:
+            if not file_exists:
+                # Write header if the file does not exist
+                header = "R_N,R_M,R_P,Lam_min,Lam_max,M_s,P_s,M_u,P_u\n"
+                f.write(header)
+            
+            # Write features
+            f.write(features)
 
-
-        with open(comment+".csv","a") as f:
-            if exist:
-                f.write(features)
-            else:
-                f.write("R_N,R_M,R_P,Lam_min,Lam_max,M_s,P_s,M_u,P_u\n")
-                f.write(features)
 
 def AugMat(signal: np.ndarray, h: int):
     n, m = signal.shape
