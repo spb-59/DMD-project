@@ -1,39 +1,52 @@
-# Import necessary libraries
 import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import classification_report, plot_confusion_matrix
 
-# Load your dataset
-# df = pd.read_csv('your_dataset.csv')
-# X = df.drop('target_column', axis=1)  # Features
-# y = df['target_column']  # Target variable
+def RF(X_tr, Y_tr, X_te, Y_te):
+    # Create the param grid
+    param_grid = {
+        'n_estimators': [int(x) for x in np.linspace(start=10, stop=100, num=10)],  # Number of trees in the forest
+        'max_depth': range(1, 10),  # Maximum number of levels in each tree
+        'criterion': ['gini', 'entropy']  # Measure the quality of a split
+    }
 
-# For demonstration, let's create a synthetic dataset
-from sklearn.datasets import make_classification
-X, y = make_classification(n_samples=1000, n_features=20, n_classes=2, random_state=42)
+    # GridSearchCV to find the optimal parameters
+    optimal_params = GridSearchCV(
+        estimator=RandomForestClassifier(random_state=42),
+        param_grid=param_grid,
+        cv=10,  # 10-fold cross-validation
+        scoring='accuracy',
+        verbose=0,
+        n_jobs=-1
+    )
 
-# Split the dataset into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    # Fit GridSearchCV
+    optimal_params.fit(X_tr, Y_tr)
+    print("Best parameters found: ", optimal_params.best_params_)
 
-# Initialize the Random Forest model
-rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+    # Extract the best parameters
+    criterion = optimal_params.best_params_['criterion']
+    max_depth = optimal_params.best_params_['max_depth']
+    n_estimators = optimal_params.best_params_['n_estimators']
 
-# Train the model
-rf_model.fit(X_train, y_train)
+    # Create the Random Forest model with the optimal parameters
+    rf_model = RandomForestClassifier(
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        criterion=criterion,
+        random_state=42
+    )
 
-# Make predictions
-y_pred = rf_model.predict(X_test)
+    # Fit the model
+    rf_model.fit(X_tr, Y_tr)
 
-# Evaluate the model
-accuracy = accuracy_score(y_test, y_pred)
-conf_matrix = confusion_matrix(y_test, y_pred)
-class_report = classification_report(y_test, y_pred)
+    # Predict the response
+    rf_pred = rf_model.predict(X_te)
 
-# Print the results
-print(f'Accuracy: {accuracy:.2f}')
-print('Confusion Matrix:')
-print(conf_matrix)
-print('Classification Report:')
-print(class_report)
+    # Plot confusion matrix
+    plot_confusion_matrix(Y_te, rf_pred, display_labels=['Class 0', 'Class 1'])
+    
+    # Classification Report
+    print("Classification Report: Random Forest")
+    print(classification_report(Y_te, rf_pred, digits=2))
