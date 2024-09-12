@@ -1,5 +1,7 @@
 
+from collections import Counter
 import os
+from matplotlib import pyplot as plt
 from wfdb.io import rdrecord
 from wfdb import Record
 import wfdb.processing as wd
@@ -18,14 +20,33 @@ lg.basicConfig(
     level=lg.INFO                      # Log level (INFO, DEBUG, WARNING, ERROR, CRITICAL)
 )
 
-# If you also want logs to be displayed on the console:
 console = lg.StreamHandler()
 console.setLevel(lg.INFO)
 formatter = lg.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 console.setFormatter(formatter)
 lg.getLogger().addHandler(console)
 
+
+
+
 basePath="./physionet-data/"
+
+SNOMED = pd.read_csv(basePath+'ConditionNames_SNOMED-CT.csv')
+
+
+mapping = pd.Series(SNOMED['Acronym Name'].values, index=SNOMED['Snomed_CT'].astype(str)).to_dict()
+
+
+def parseConditions(comments):
+
+
+    for data in comments:
+        if data.startswith("Dx:"):
+            dx_codes = data.split(": ")[1].split(",")
+
+            mapped = [mapping.get(dx, f"Unknown Dx: {dx}") for dx in dx_codes]
+            return mapped
+
 
 
 
@@ -61,28 +82,35 @@ lg.info(f'File name info extracted,{len(names)} records found ')
 
 lg.info("Starting signal processing")
 
-for i in range(100):
+freq=[]
+for i in range(50):
     lg.info(f"Starting processing for {names[i]}")
 
     record:Record=rdrecord(recordPath[i])
     lg.info("Record extracted")
     
+    record.p_signal=wd.normalize_bound(record.p_signal)
     signal=record.to_dataframe()
     sf=record.fs
 
     lg.info("Denoising starting")
     signal:pd.DataFrame=denoise(signal,sf)
+    comments=parseConditions(record.comments)
+
     signal=signal.to_numpy()
 
     lg.info("Denoising finished for signal, creating entry to directory")
 
-    wrsamp(record_name=names[i],fs=sf,units=record.units,sig_name=record.sig_name,p_signal=signal,fmt=record.fmt,comments=record.comments,write_dir='./physionet-data/processed1')
+    wrsamp(record_name=names[i],fs=sf,units=record.units,sig_name=record.sig_name,p_signal=signal,fmt=record.fmt,comments=comments,write_dir='./physionet-data/processed1')
     lg.info("Entry created, starting next record")
 
 
 lg.info("Processing Complete")
 end=  time.perf_counter()
 lg.info(f'Signal processing complete for {len(names)} records in {end-start:.3f} time')
+counter = Counter(freq)
+
+
 
 
 
