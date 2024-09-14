@@ -13,26 +13,11 @@ import time
 import multiprocessing as mp
 
 
-# Set up the logger configuration
-lg.basicConfig(
-    filename='signal_processing.log',  # Log to a file
-    filemode='a',                      # Append to the log file
-    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
-    level=lg.INFO                      # Log level (INFO, DEBUG, WARNING, ERROR, CRITICAL)
-)
-
-console = lg.StreamHandler()
-console.setLevel(lg.INFO)
-formatter = lg.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-console.setFormatter(formatter)
-lg.getLogger().addHandler(console)
 
 
+basePath="physionet-data/a-large-scale-12-lead-electrocardiogram-database-for-arrhythmia-study-1.0.0/"
 
-
-basePath="./physionet.org/files/ecg-arrhythmia/1.0.0/"
-
-SNOMED = pd.read_csv('physionet.org/files/ecg-arrhythmia/1.0.0/ConditionNames_SNOMED-CT.csv')
+SNOMED = pd.read_csv('physionet-data/a-large-scale-12-lead-electrocardiogram-database-for-arrhythmia-study-1.0.0/ConditionNames_SNOMED-CT.csv')
 
 
 mapping = pd.Series(SNOMED['Acronym Name'].values, index=SNOMED['Snomed_CT'].astype(str)).to_dict()
@@ -59,6 +44,7 @@ def process_record(record_path, record_name):
 
         record.p_signal = wd.normalize_bound(record.p_signal)
         signal = record.to_dataframe()
+        signal.fillna(0)
         sf = record.fs
 
         lg.info("Denoising starting")
@@ -82,7 +68,7 @@ def process_record(record_path, record_name):
         lg.info("Entry created, starting next record")
 
     except Exception as e:
-        lg.error(f"Error processing record {record_name}: {e}")
+        lg.error(f"Error filtering record {record_name}: {e}")
 
 def Denoise():
     start = time.perf_counter()
@@ -103,7 +89,7 @@ def Denoise():
             for file in files:
                 if file.endswith(".mat"):
                     record_name = os.path.splitext(file)[0]
-                    record_path = os.path.join(root, file)  # Use file here, not record_name
+                    record_path = os.path.join(root, record_name)  # Use file here, not record_name
 
                     names.append(record_name)
                     recordPath.append(record_path)

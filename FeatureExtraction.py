@@ -9,7 +9,31 @@ import multiprocessing as mp
 
 
 path="processed1"
+    
 
+def getHeader(M_s, P_s, M_u, P_u):
+    m_s_str = ', '.join([f'M_s{i+1}' for i in range(len(M_s))])
+    p_s_str = ', '.join([f'P_s{i+1}' for i in range(len(P_s))])
+    m_u_str = ', '.join([f'M_u{i+1}' for i in range(len(M_u))])
+    p_u_str = ', '.join([f'P_u{i+1}' for i in range(len(P_u))])
+    return f"R_N, R_M, R_P, Lam_min, Lam_max, {m_s_str}, {p_s_str}, {m_u_str}, {p_u_str}"
+
+
+
+def format_array(array):
+    """Convert a numpy array or list to a space-separated string."""
+    return str(array).strip('[]').strip(' ')
+  
+
+def format_csv_row(R_N, R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u):
+    """Format the row into a CSV-compatible string."""
+    return (
+        f"{R_N},{R_M},{R_P},{Lam_min},{Lam_max},"
+        f"{format_array(M_s)},"
+        f"{format_array(P_s)},"
+        f"{format_array(M_u)},"
+        f"{format_array(P_u)}\n"
+    )
 
 def featureExtract():
 
@@ -41,7 +65,7 @@ def process_record(record_path):
         recordSig = rdrecord(record_path)
         lg.info("Starting DMD for record: %s", record_path)
         
-        features = extract(recordSig.p_signal)
+        features, header = extract(recordSig.p_signal)
         
         writeFile(features, recordSig.comments)
         
@@ -99,16 +123,15 @@ def extract(signal:np.ndarray):
     M_u = np.sum(np.abs(Pho_u), axis=1)/numU 
     P_u = np.sum(np.angle(Pho_u-np.angle(Pho_u[0])), axis=1)/numU
 
-    return f"{str(R_N)},{str(R_M)},{str(R_P)},{str(Lam_min)},{str(Lam_max)},{str(M_s)},{str(P_s)},{str(M_u)},{str(P_u)}\n"
+    return  format_csv_row(R_N, R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u),getHeader(M_s,P_s,M_u,P_u)
 
 
 
-def writeFile(features,comments):
+def writeFile(features,header,comments):
     for comment in comments:
         file_path = os.path.join("features", f"{comment}.csv")
         
-        # Print the comment for debugging
-        print(comment)
+
         
         # Determine if the file exists
         file_exists = os.path.exists(file_path)
@@ -117,7 +140,6 @@ def writeFile(features,comments):
         with open(file_path, "a") as f:
             if not file_exists:
                 # Write header if the file does not exist
-                header = "R_N,R_M,R_P,Lam_min,Lam_max,M_s,P_s,M_u,P_u\n"
                 f.write(header)
             
             # Write features
@@ -132,14 +154,6 @@ def AugMat(signal: np.ndarray, h: int):
             row = signal[i][x:m-h+x]
             aug.append(row)
     return np.vstack(aug)
-
-
-
-       
-
-if __name__=="__main__":
-    featureExtract()
-
 
 
 

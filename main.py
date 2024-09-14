@@ -1,7 +1,7 @@
 from Denoise import Denoise
 from FeatureExtraction import featureExtract
 import logging as lg
-
+from Model import runModel
 
 
 lg.basicConfig(
@@ -18,5 +18,6 @@ console.setFormatter(formatter)
 lg.getLogger().addHandler(console)
 
 
-Denoise()
-featureExtract()
+# Denoise()
+# featureExtract()
+runModel()

@@ -4,6 +4,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import classification_report
 from sklearn.metrics import ConfusionMatrixDisplay
+import logging as lg
+import time
 
 
 
@@ -27,9 +29,16 @@ def runModel():
     X = DATASET.drop(["Label"], axis =1)
     Y = DATASET["Label"]
 
-    print(X,Y)
+
 
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, stratify= Y)
+    print(X_train)
+    lg.info('Finished Splitting running model')
+    start=time.perf_counter()
+    RF(X_tr=X_train,X_te=X_test,Y_te=Y_train,Y_tr=Y_train)
+    end=time.perf_counter()
+
+    lg.info('Ran for %d',end-start)
 
 
 
