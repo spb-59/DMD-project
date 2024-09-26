@@ -16,23 +16,19 @@ def getHeader(M_s, P_s, M_u, P_u):
     p_s_str = ', '.join([f'P_s{i+1}' for i in range(len(P_s))])
     m_u_str = ', '.join([f'M_u{i+1}' for i in range(len(M_u))])
     p_u_str = ', '.join([f'P_u{i+1}' for i in range(len(P_u))])
-    return f"R_N, R_M, R_P, Lam_min, Lam_max, {m_s_str}, {p_s_str}, {m_u_str}, {p_u_str}"
+    return f"R_N,R_L,R_M,R_P,Lam_min,Lam_max,{m_s_str},{p_s_str},{m_u_str},{p_u_str}\n"
 
 
 
 def format_array(array):
     """Convert a numpy array or list to a space-separated string."""
-    return str(array).strip('[]').strip(' ')
+    return  ', '.join(map(str, array))
   
 
-def format_csv_row(R_N, R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u):
+def format_csv_row(R_N, R_L,R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u):
     """Format the row into a CSV-compatible string."""
     return (
-        f"{R_N},{R_M},{R_P},{Lam_min},{Lam_max},"
-        f"{format_array(M_s)},"
-        f"{format_array(P_s)},"
-        f"{format_array(M_u)},"
-        f"{format_array(P_u)}\n"
+        f"{R_N},{R_L},{R_M},{R_P},{Lam_min},{Lam_max},"+f"{format_array(M_s)},"+f"{format_array(P_s)},"+f"{format_array(M_u)},"+f"{format_array(P_u)}\n"
     )
 
 def featureExtract():
@@ -55,7 +51,6 @@ def featureExtract():
                 names.append(record_name)
 
                 recordPath.append(record_path)
-
     num_workers = 4
     with mp.Pool(num_workers) as pool:
         pool.map(process_record, recordPath)
@@ -64,14 +59,23 @@ def process_record(record_path):
     try:
         recordSig = rdrecord(record_path)
         lg.info("Starting DMD for record: %s", record_path)
+
+        if 'Unknown' in recordSig.comments:
+            lg.log('Unkown found no process')
+            raise KeyError('KeyError') 
+
+        signals=[recordSig.p_signal[i:i + 2000] for i in range(0, len(recordSig.p_signal), 2000)]
+        for signal in signals:
+         features, header = extract(signal)
         
-        features, header = extract(recordSig.p_signal)
-        
-        writeFile(features, recordSig.comments)
+         writeFile(features, header,recordSig.comments)
         
         lg.info("Finished extracting for record: %s", record_path)
+    except KeyError as e:
+        lg.error("Error key not found %s",e)
     except Exception as e:
         lg.error("Error processing record %s: %s", record_path, e)
+
 
 def extract(signal:np.ndarray):
 
@@ -109,6 +113,9 @@ def extract(signal:np.ndarray):
     # unstable to stable DM ratio
     R_N=(numU)/(numU+numS)
 
+    #unstable lambda to all
+    R_L=np.sum(np.abs(Lambda_u))/(np.sum(np.abs(Lambda_s))+np.sum(np.abs(Lambda_u)))
+
     R_M = np.sum(np.sum(np.abs(Pho_u), axis = 1))/(np.sum(np.sum(np.abs(Pho_u), axis = 1)) + np.sum(np.sum(np.abs(Pho_s), axis = 1)))
     R_P = np.sum(np.sum(np.angle(Pho_u), axis = 1))/(np.sum(np.sum(np.angle(Pho_u), axis = 1)) +  np.sum(np.sum(np.angle(Pho_s), axis = 1)))
 
@@ -123,13 +130,13 @@ def extract(signal:np.ndarray):
     M_u = np.sum(np.abs(Pho_u), axis=1)/numU 
     P_u = np.sum(np.angle(Pho_u-np.angle(Pho_u[0])), axis=1)/numU
 
-    return  format_csv_row(R_N, R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u),getHeader(M_s,P_s,M_u,P_u)
+    return  format_csv_row(R_N,R_L, R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u),getHeader(M_s,P_s,M_u,P_u)
 
 
 
 def writeFile(features,header,comments):
     for comment in comments:
-        file_path = os.path.join("features", f"{comment}.csv")
+        file_path = os.path.join("features2", f"{comment}.csv")
         
 
         
@@ -154,6 +161,10 @@ def AugMat(signal: np.ndarray, h: int):
             row = signal[i][x:m-h+x]
             aug.append(row)
     return np.vstack(aug)
+
+if __name__=="__main__":
+    print(format_array([1,2,3]))
+    
 
 
 

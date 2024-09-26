@@ -13,6 +13,18 @@ import time
 import multiprocessing as mp
 
 
+lg.basicConfig(
+    filename='signal_processing.log',  # Log to a file
+    filemode='a',                      # Append to the log file
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
+    level=lg.INFO                      # Log level (INFO, DEBUG, WARNING, ERROR, CRITICAL)
+)
+
+console = lg.StreamHandler()
+console.setLevel(lg.INFO)
+formatter = lg.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+console.setFormatter(formatter)
+lg.getLogger().addHandler(console)
 
 
 basePath="physionet-data/a-large-scale-12-lead-electrocardiogram-database-for-arrhythmia-study-1.0.0/"
@@ -38,16 +50,19 @@ def parseConditions(comments):
 def process_record(record_path, record_name):
     try:
         lg.info(f"Starting processing for {record_name}")
+        lg.info(record_path)
 
         record = rdrecord(record_path)
+
         lg.info("Record extracted")
 
-        record.p_signal = wd.normalize_bound(record.p_signal)
+        # record.p_signal = wd.normalize_bound(record.p_signal)
         signal = record.to_dataframe()
-        signal.fillna(0)
         sf = record.fs
+        signal.fillna(0,inplace=True)
 
         lg.info("Denoising starting")
+
         signal = denoise(signal, sf)
         comments = parseConditions(record.comments)
 
@@ -107,3 +122,5 @@ def Denoise():
     end = time.perf_counter()
     lg.info(f'Signal processing complete for {len(names)} records in {end - start:.3f} seconds')
 
+if __name__=="__main__":
+    Denoise()
