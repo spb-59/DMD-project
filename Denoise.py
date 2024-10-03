@@ -56,7 +56,7 @@ def process_record(record_path, record_name):
 
         lg.info("Record extracted")
 
-        # record.p_signal = wd.normalize_bound(record.p_signal)
+        record.p_signal = wd.normalize_bound(record.p_signal)
         signal = record.to_dataframe()
         sf = record.fs
         signal.fillna(0,inplace=True)

@@ -1,5 +1,8 @@
+from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import classification_report
@@ -7,12 +10,15 @@ from sklearn.metrics import ConfusionMatrixDisplay
 import logging as lg
 import time
 import os
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
 import xgboost as xgb
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.class_weight import compute_class_weight
+import scipy.stats as stats
 
 def cleanData(df:pd.DataFrame,i:int):
-    df.apply(pd.to_numeric, errors='coerce')
+    df=df.apply(pd.to_numeric, errors='coerce')
     df.dropna(inplace=True)
     df['Label']=i
     return df
@@ -32,27 +38,53 @@ def preprocess_data(X):
         X[column] = le.fit_transform(X[column])
     
     return X
+
+def significanceTest(SR,COND):
+    significant=[]
+
+
+
+    for column in SR.columns:
+        if column in COND.columns and column!="Label":  
+            srVal = SR[column]
+            condVal = COND[column] 
+            
+
+            _, p_value = stats.mannwhitneyu(srVal, condVal, alternative='two-sided')
+            if p_value<0.05:
+                significant.append(column)
+    print(significant)
+    return significant
+
 def runModel():
 
     
-    datasets=cleanData(pd.read_csv('features/SR.csv',low_memory=False),0).iloc[:5000]
+    datasets=cleanData(pd.read_csv('features3/SR.csv',low_memory=False),0).iloc[:6000]
+    SR=datasets.copy()
     
     label=1
-    for filename in os.listdir('features'):
+    for filename in os.listdir('features3'):
     
         if filename.endswith('.csv') and filename != 'SR.csv' and not "Unknown" in filename and filename in ['AFIB.csv']:
         
-            df = cleanData(pd.read_csv(os.path.join('features', filename),low_memory=False), 1)
+            df = cleanData(pd.read_csv(os.path.join('features3', filename),low_memory=False), label)
+            sig=significanceTest(SR,df)
+            sig.append('Label')
             label+=1
-            datasets=pd.concat([datasets,df])
+            datasets=pd.concat([datasets[sig],df[sig]])
+    
     X = datasets.drop(["Label"], axis =1)
+   
     
     Y = datasets["Label"]
-    print(Y)
+
 
 
 
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, stratify=Y, test_size=0.2, random_state=42)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test) 
   
     lg.info('Finished Splitting running model')
     start=time.perf_counter()
@@ -103,7 +135,9 @@ def RF(X_tr, Y_tr, X_te, Y_te):
     rf_pred = rf_model.predict(X_te)
 
     # Plot confusion matrix
-    ConfusionMatrixDisplay.from_estimator(estimator=rf_model, X=X_te, y=Y_te)
+    plot=ConfusionMatrixDisplay.from_estimator(estimator=rf_model, X=X_te, y=Y_te)
+    plot.plot()
+    plt.show()
 
     # Classification Report
     print("Classification Report: Random Forest")
@@ -111,82 +145,11 @@ def RF(X_tr, Y_tr, X_te, Y_te):
     with open('results.txt', 'a') as f:
         f.write(classification_report(Y_te, rf_pred, digits=2))
 
-# def XGBoost(X_tr, Y_tr, X_te, Y_te):
-#     # Create the parameter grid
-#     lg.info("Param tune")
-#     param_grid = {
-#         'n_estimators': [int(x) for x in np.linspace(start=10, stop=100, num=10)],
-#         'max_depth': range(1, 10),
-#         'learning_rate': [0.01, 0.1, 0.2],
-#         'subsample': [0.8, 1.0],
-#         'colsample_bytree': [0.8, 1.0],
-#         'objective': ['multi:softmax']
-#     }
-#     lg.info("Param tune done")
 
-#     lg.info("optimal param")
-#     # GridSearchCV for hyperparameter tuning
-#     optimal_params = GridSearchCV(
-#         estimator=xgb.XGBClassifier(tree_method='gpu_hist', device='cuda', random_state=42),
-#         param_grid=param_grid,
-#         cv=10,
-#         scoring='accuracy',
-#         verbose=0,
-#         n_jobs=1
-#     )
-#     lg.info("optimal param done")
-
-#     # Fit the model
-#     optimal_params.fit(X_tr, Y_tr)
-#     print("Best parameters found: ", optimal_params.best_params_)
-
-#     # Create the XGBoost model using the best parameters
-#     best_params = optimal_params.best_params_
-#     xgb_model = xgb.XGBClassifier(
-#         tree_method='hist',
-#         device='cuda',  # Ensure GPU utilization
-#         random_state=42,
-#         **best_params
-     
-#     )
-
-#     # Fit the model
-#     xgb_model.fit(X_tr, Y_tr)
-
-#     # Predict the response
-#     xgb_pred = xgb_model.predict(X_te)
-
-#     # Plot confusion matrix
-#     ConfusionMatrixDisplay.from_estimator(estimator=xgb_model, X=X_te, y=Y_te)
-
-#     # Classification Report
-#     print("Classification Report: XGBoost")
-#     print(classification_report(Y_te, xgb_pred, digits=2))
-#     with open('results.txt', 'a') as f:
-#         f.write(classification_report(Y_te, xgb_pred, digits=2))
-
-
-
-# if __name__=="__main__":
-#     import xgboost as xgb
-#     from sklearn.datasets import load_iris
-#     from sklearn.model_selection import train_test_split
-
-#     # Load a simple dataset
-#     data = load_iris()
-
-#     X, y = data.data, data.target
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-#     # Create a simple XGBoost model with GPU support
-#     xgb_model = xgb.XGBClassifier(tree_method='hist', device='cuda', random_state=42)
-
-#     # Fit the model and check for GPU utilization
-#     xgb_model.fit(X_train, y_train)
 
 def XGBoost(X_tr, Y_tr, X_te, Y_te):
-    X_tr = preprocess_data(X_tr)
-    X_te = preprocess_data(X_te)
+    # X_tr = preprocess_data(X_tr)
+    # X_te = preprocess_data(X_te)
 
     # Calculate class weight
     class_weight = compute_class_weight('balanced', classes=np.unique(Y_tr), y=Y_tr)
@@ -206,7 +169,6 @@ def XGBoost(X_tr, Y_tr, X_te, Y_te):
     xgb_model = xgb.XGBClassifier(
         objective='binary:logistic',
         tree_method='hist',
-        device='cuda',  # Ensure GPU utilization
         random_state=42
     )
 
@@ -245,8 +207,8 @@ def XGBoost(X_tr, Y_tr, X_te, Y_te):
     print(report)
 
 def XGBoostQ(X_tr, Y_tr, X_te, Y_te):
-    X_tr = preprocess_data(X_tr)
-    X_te = preprocess_data(X_te)
+    # X_tr = preprocess_data(X_tr)
+    # X_te = preprocess_data(X_te)
     class_weight = compute_class_weight('balanced', classes=np.unique(Y_tr), y=Y_tr)
     lg.info("Fitting XGBoost model with predefined parameters")
     
@@ -259,7 +221,7 @@ def XGBoostQ(X_tr, Y_tr, X_te, Y_te):
         colsample_bytree=0.8,    # Fraction of features to use for each tree
         objective='binary:logistic',  # Multi-class classification
         tree_method='hist',   # Use GPU
-        device='cuda',            # Ensure GPU utilization
+        # device='cuda',            # Ensure GPU utilization
         random_state=42,
     
     )
@@ -277,3 +239,13 @@ def XGBoostQ(X_tr, Y_tr, X_te, Y_te):
     print("Classification Report: XGBoost")
     report = classification_report(Y_te, xgb_pred, digits=2)
     print(report)
+
+def SVM(X_tr, Y_tr, X_te, Y_te):
+    # Create the SVM model
+    model = SVC(kernel='linear', class_weight='balanced', random_state=42)
+    
+
+    model.fit(X_tr,Y_tr)
+    Y_pred = model.predict(X_te)
+
+    print("Classification Report:\n", classification_report(Y_te, Y_pred))
