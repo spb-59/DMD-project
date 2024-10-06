@@ -123,12 +123,16 @@ def extract(signal:np.ndarray):
     Lam_min = np.min(np.abs(Lambda_s),initial = -1 )
     Lam_max = np.max(np.abs(Lambda_u), initial = -1 )
 
-    M_s = np.mean(np.abs(Pho_s), axis=1)
-    P_s = np.mean(np.angle(Pho_s-np.angle(Pho_u[0])), axis=1)
-
-
+    #for unstble modes
     M_u = np.mean(np.abs(Pho_u), axis=1)
     P_u = np.mean(np.angle(Pho_u-np.angle(Pho_u[0])), axis=1)
+
+
+    #for stable modes
+    M_s = np.mean(np.abs(Pho_s), axis=1)
+    P_s = np.mean(np.angle(Pho_s-np.angle(Pho_s[0])), axis=1)
+
+
 
     return  format_csv_row(R_N,R_L, R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u),getHeader(M_s,P_s,M_u,P_u)
 
