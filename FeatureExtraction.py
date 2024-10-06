@@ -8,7 +8,7 @@ import pydmd as dmd
 import multiprocessing as mp
 
 
-path="processed1"
+path="processed2"
     
 
 def getHeader(M_s, P_s, M_u, P_u):
@@ -63,8 +63,8 @@ def process_record(record_path):
         if 'Unknown' in recordSig.comments:
             lg.log('Unkown found no process')
             raise KeyError('KeyError') 
-        recordSigDf=recordSig.to_dataframe()['II']
-        signals=[recordSigDf[i:i + 2000] for i in range(0, len(recordSigDf), 2000)]
+
+        signals=[recordSig.p_signal[i:i + 4000,:12] for i in range(0, len(recordSig.p_signal), 4000)]
         for signal in signals:
          features, header = extract(signal)
         
@@ -81,7 +81,8 @@ def extract(signal:np.ndarray):
 
 
     # Get the signals augumented
-    signal=AugMat(signal.T,1000)[1:]
+    signal=AugMat(signal.T,200)
+
 
     #fit the DMD model
     DMD=dmd.DMD()
@@ -91,21 +92,19 @@ def extract(signal:np.ndarray):
     eigs=DMD.eigs
     modes=DMD.modes
 
-    
-
     #restack the modes to match the 12 leads
+    restacked= modes.reshape(12, 200, -1).mean(axis=1)
 
     #get lambda U for unstable S for stable
     Lambda_ind_u = np.where(np.abs(eigs) > 1)
     Lambda_ind_s = np.where(np.abs(eigs) < 1)
 
-
     Lambda_u = eigs[Lambda_ind_u] #unstable eigen values
-    Lambda_s = eigs[Lambda_ind_s] #stable eigen value
+    Lambda_s = eigs[Lambda_ind_s] #stable eigen values
 
     # Get the eigenvectors off the eigenvalue indexes
-    Pho_u =  modes[:,Lambda_ind_u].reshape(10, 100, -1).mean(axis=1)#unstable modes
-    Pho_s = modes[:,Lambda_ind_s].reshape(10, 100, -1).mean(axis=1) #stable modes
+    Pho_u = restacked[:,Lambda_ind_u].reshape((12,Lambda_u.shape[0])) #unstable modes
+    Pho_s = restacked[:,Lambda_ind_s].reshape((12,Lambda_s.shape[0])) #stable modes
 
     #number of Stable and unstable modes
     numS=Lambda_s.shape[0]
@@ -124,12 +123,12 @@ def extract(signal:np.ndarray):
     Lam_min = np.min(np.abs(Lambda_s),initial = -1 )
     Lam_max = np.max(np.abs(Lambda_u), initial = -1 )
 
-    M_s = np.sum(np.abs(Pho_s), axis=1)/numS
-    P_s = np.sum(np.angle(Pho_s), axis=1) / numS
+    M_s = np.mean(np.abs(Pho_s), axis=1)
+    P_s = np.mean(np.angle(Pho_s-np.angle(Pho_u[0])), axis=1)
 
 
-    M_u = np.sum(np.abs(Pho_u), axis=1)/numU 
-    P_u = np.sum(np.angle(Pho_u-np.angle(Pho_u[0])), axis=1)/numU
+    M_u = np.mean(np.abs(Pho_u), axis=1)
+    P_u = np.mean(np.angle(Pho_u-np.angle(Pho_u[0])), axis=1)
 
     return  format_csv_row(R_N,R_L, R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u),getHeader(M_s,P_s,M_u,P_u)
 
@@ -137,7 +136,7 @@ def extract(signal:np.ndarray):
 
 def writeFile(features,header,comments):
     for comment in comments:
-        file_path = os.path.join("features3", f"{comment}.csv")
+        file_path = os.path.join("features4", f"{comment}.csv")
         
 
         
@@ -155,20 +154,13 @@ def writeFile(features,header,comments):
 
 
 def AugMat(signal: np.ndarray, h: int):
-    n = len(signal)
+    n, m = signal.shape
     aug = []
-
-    # Ensure the height does not exceed the length of the signal
-    if h > n:
-        raise ValueError("Height 'h' must be less than or equal to the length of the signal.")
-
-    # Create the augmented matrix
-    for i in range(n - h + 1):  # Start from 0 to n-h
-        row = signal[i:i+h]    # Take h elements starting from index i
-        aug.append(row)
-
+    for i in range(n):
+        for x in range(h):
+            row = signal[i][x:m-h+x]
+            aug.append(row)
     return np.vstack(aug)
-
 
 if __name__=="__main__":
     print(format_array([1,2,3]))
@@ -187,6 +179,3 @@ if __name__=="__main__":
 
 
     
-
-
-

@@ -19,5 +19,5 @@ lg.getLogger().addHandler(console)
 
 
 # Denoise()
-# featureExtract()
-runModel()
+featureExtract()
+# runModel()
