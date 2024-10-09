@@ -8,7 +8,7 @@ import pydmd as dmd
 import multiprocessing as mp
 
 
-path="processed2"
+path="processed1"
     
 
 def getHeader(M_s, P_s, M_u, P_u):
@@ -60,11 +60,12 @@ def process_record(record_path):
         recordSig = rdrecord(record_path)
         lg.info("Starting DMD for record: %s", record_path)
 
-        if 'Unknown' in recordSig.comments:
-            lg.log('Unkown found no process')
-            raise KeyError('KeyError') 
+        for c in recordSig.comments: 
+            if not (c in ['AFIB','SR','AF','VB'] ):
+                lg.info('Unkown found no process')
+                raise KeyError('KeyError') 
 
-        signals=[recordSig.p_signal[i:i + 4000,:12] for i in range(0, len(recordSig.p_signal), 4000)]
+        signals=[recordSig.p_signal[i:i + 2000,:12] for i in range(0, len(recordSig.p_signal), 2000)]
         for signal in signals:
          features, header = extract(signal)
         
@@ -140,7 +141,7 @@ def extract(signal:np.ndarray):
 
 def writeFile(features,header,comments):
     for comment in comments:
-        file_path = os.path.join("features4", f"{comment}.csv")
+        file_path = os.path.join("features5", f"{comment}.csv")
         
 
         
