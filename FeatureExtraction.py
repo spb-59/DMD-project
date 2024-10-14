@@ -65,7 +65,7 @@ def process_record(record_path):
                 lg.info('Unkown found no process')
                 raise KeyError('KeyError') 
 
-        signals=[recordSig.p_signal[i:i + 2000,:12] for i in range(0, len(recordSig.p_signal), 2000)]
+        signals=[recordSig.p_signal[i:i + 2500,:12] for i in range(0, len(recordSig.p_signal), 2500)]
         for signal in signals:
          features, header = extract(signal)
         
@@ -141,7 +141,7 @@ def extract(signal:np.ndarray):
 
 def writeFile(features,header,comments):
     for comment in comments:
-        file_path = os.path.join("features5", f"{comment}.csv")
+        file_path = os.path.join("features6", f"{comment}.csv")
         
 
         
