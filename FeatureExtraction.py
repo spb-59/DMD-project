@@ -55,6 +55,23 @@ def featureExtract():
     with mp.Pool(num_workers) as pool:
         pool.map(process_record, recordPath)
 
+def process(signal:np.ndarray,comments):
+    signals=[signal[x:x+1000] for x in range(0,4000,1000)]
+    init=extract(signals[0])
+    
+
+    header='R_N,R_L,R_M,R_P,Lam_min,Lam_max,M_s1, M_s2, M_s3, M_s4, M_s5, M_s6, M_s7, M_s8, M_s9, M_s10, M_s11, M_s12,P_s1, P_s2, P_s3, P_s4, P_s5, P_s6, P_s7, P_s8, P_s9, P_s10, P_s11, P_s12,M_u1, M_u2, M_u3, M_u4, M_u5, M_u6, M_u7, M_u8, M_u9, M_u10, M_u11, M_u12,P_u1, P_u2, P_u3, P_u4, P_u5, P_u6, P_u7, P_u8, P_u9, P_u10, P_u11, P_u12'
+    writeFile(init,header,comments,True)
+
+    for i in range(1,len(signals)):
+        new=extract(signals[i])
+        writeFile(new,header,comments,True)
+        dfInit=[float(x) for x in init.split(',')]
+        dfNew=[float(x) for x in new.split(',')]
+        store=[float(dfNew[x])-float(dfInit[x]) for x in range(len(dfNew))]
+        writeFile(store,header,comments)
+        
+
 def process_record(record_path):
     try:
         recordSig = rdrecord(record_path)
@@ -64,12 +81,11 @@ def process_record(record_path):
             if not (c in ['AFIB','SR','AF','VB'] ):
                 lg.info('Unkown found no process')
                 raise KeyError('KeyError') 
-
-        signals=[recordSig.p_signal[i:i + 2500,:12] for i in range(0, len(recordSig.p_signal), 2500)]
-        for signal in signals:
-         features, header = extract(signal)
         
-         writeFile(features, header,recordSig.comments)
+        process(recordSig.p_signal,recordSig.comments)
+
+
+        
         
         lg.info("Finished extracting for record: %s", record_path)
     except KeyError as e:
@@ -135,13 +151,30 @@ def extract(signal:np.ndarray):
 
 
 
-    return  format_csv_row(R_N,R_L, R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u),getHeader(M_s,P_s,M_u,P_u)
+    return  format_csv_row(R_N,R_L, R_M, R_P, Lam_min, Lam_max, M_s, P_s, M_u, P_u)
 
 
 
-def writeFile(features,header,comments):
+def writeFile(features,header,comments,cond=False):
+    if cond:
+        for comment in comments:
+            file_path = os.path.join("features8", f"{comment}.csv")
+            
+            # Determine if the file exists
+            file_exists = os.path.exists(file_path)
+            
+            # Open the file in append mode
+            with open(file_path, "a") as f:
+                if not file_exists:
+                    # Write header if the file does not exist
+                    f.write(header)
+                
+                # Write features
+                f.write(features)
+        return
+
     for comment in comments:
-        file_path = os.path.join("features6", f"{comment}.csv")
+        file_path = os.path.join("features7", f"{comment}.csv")
         
 
         
@@ -155,7 +188,7 @@ def writeFile(features,header,comments):
                 f.write(header)
             
             # Write features
-            f.write(features)
+            f.write(format_array(features)+"\n")
 
 
 def AugMat(signal: np.ndarray, h: int):
