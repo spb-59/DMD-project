@@ -22,6 +22,8 @@ def preprocess():
     
     MI = []
     HC = []
+    DR=[]
+    BBB=[]
     for path in paths:
         record = rdrecord(path)
         cond = parseConditions(record)
@@ -31,15 +33,31 @@ def preprocess():
         elif cond == 'MI':
             MI.append(path)
             lg.info(f'Classified {path} as Myocardial Infarction')
+        elif cond == 'DR':
+            DR.append(path)
+            lg.info(f'Classified {path} as Dysrhythmia')
+        elif cond == 'BBB':
+            BBB.append(path)
+            lg.info(f'Classified {path} as Bundle Branch Block')
 
     num_workers = mp.cpu_count()
-    lg.info(f'Starting processing with {num_workers} workers for MI...')
-    with mp.Pool(num_workers) as pool:
-        pool.starmap(process_record, zip(MI[:50], ['MI'] * 50))
 
-    lg.info(f'Starting processing with {num_workers} workers for HC...')
+
+    # lg.info(f'Starting processing with {num_workers} workers for HC...')
+    # with mp.Pool(num_workers) as pool:
+    #     pool.starmap(process_record, zip(HC[:50], ['HC'] * 50))
+
+    # lg.info(f'Starting processing with {num_workers} workers for MI...')
+    # with mp.Pool(num_workers) as pool:
+    #     pool.starmap(process_record, zip(MI[:50], ['MI'] * 50))
+
+    lg.info(f'Starting processing with {num_workers} workers for DR...')
     with mp.Pool(num_workers) as pool:
-        pool.starmap(process_record, zip(HC[:50], ['HC'] * 50))
+        pool.starmap(process_record, zip(DR[:50], ['DR'] * 50))
+
+    lg.info(f'Starting processing with {num_workers} workers for BBB...')
+    with mp.Pool(num_workers) as pool:
+        pool.starmap(process_record, zip(BBB[:50], ['BBB'] * 50))
 
     lg.info('Preprocessing completed.')
 
@@ -65,7 +83,7 @@ def process_record(path, name):
             p_signal=signal.to_numpy(),  # Convert DataFrame to values
             fmt=record.fmt,
             comments=[name],
-            write_dir='processed2'
+            write_dir='processed4'
         )
         lg.info(f'Finished processing record {path}.')
     except Exception as e:
@@ -78,6 +96,10 @@ def parseConditions(record: Record):
             return 'MI'
         if 'Healthy control' in c:
             return 'HC'
+        if 'Dysrhythmia' in c:
+            return 'DR'
+        if 'Bundle branch block' in c:
+            return 'BBB'
     return 'NA'
 
 if __name__ == '__main__':
