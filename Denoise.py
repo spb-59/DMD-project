@@ -1,5 +1,7 @@
 
+from collections import Counter
 import os
+from matplotlib import pyplot as plt
 from wfdb.io import rdrecord
 from wfdb import Record
 import wfdb.processing as wd
@@ -8,9 +10,9 @@ from wfdb.io import wrsamp
 from denoising import denoise
 import logging as lg
 import time
+import multiprocessing as mp
 
 
-# Set up the logger configuration
 lg.basicConfig(
     filename='signal_processing.log',  # Log to a file
     filemode='a',                      # Append to the log file
@@ -18,75 +20,107 @@ lg.basicConfig(
     level=lg.INFO                      # Log level (INFO, DEBUG, WARNING, ERROR, CRITICAL)
 )
 
-# If you also want logs to be displayed on the console:
 console = lg.StreamHandler()
 console.setLevel(lg.INFO)
 formatter = lg.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 console.setFormatter(formatter)
 lg.getLogger().addHandler(console)
 
-basePath="./physionet-data/"
+
+basePath="physionet-data/a-large-scale-12-lead-electrocardiogram-database-for-arrhythmia-study-1.0.0/"
+
+SNOMED = pd.read_csv('physionet-data/a-large-scale-12-lead-electrocardiogram-database-for-arrhythmia-study-1.0.0/ConditionNames_SNOMED-CT.csv')
+
+
+mapping = pd.Series(SNOMED['Acronym Name'].values, index=SNOMED['Snomed_CT'].astype(str)).to_dict()
+
+
+def parseConditions(comments):
+
+
+    for data in comments:
+        if data.startswith("Dx:"):
+            dx_codes = data.split(": ")[1].split(",")
+
+            mapped = [mapping.get(dx, f"Unknown Dx: {dx}") for dx in dx_codes]
+            return mapped
 
 
 
-start=  time.perf_counter()
-lg.info('Starting extraction')
+def process_record(record_path, record_name):
+    try:
+        lg.info(f"Starting processing for {record_name}")
+        lg.info(record_path)
 
-lg.info("Opening Records File")
-with open(basePath+'RECORDS', 'r') as file:
-    file_paths = [line.strip() for line in file.readlines()]
+        record = rdrecord(record_path)
 
+        lg.info("Record extracted")
 
-lg.info("File paths extracted")
-recordPath=[]
-names=[]
+        record.p_signal = wd.normalize_bound(record.p_signal)
+        signal = record.to_dataframe()
+        sf = record.fs
+        signal.fillna(0,inplace=True)
 
-lg.info('Starting File Name extraction')
-for path in file_paths:
-    for root, dirs, files in os.walk(basePath+path):
+        lg.info("Denoising starting")
 
-        for file in files:
-            if file.endswith(".mat"):
+        signal = denoise(signal, sf)
+        comments = parseConditions(record.comments)
 
-                record_name = os.path.splitext(file)[0]
-                
+        signal = signal.to_numpy()
 
-                record_path = os.path.join(root, record_name)
+        lg.info("Denoising finished for signal, creating entry to directory")
 
-                names.append(record_name)
+        wrsamp(
+            record_name=record_name,
+            fs=sf,
+            units=record.units,
+            sig_name=record.sig_name,
+            p_signal=signal,
+            fmt=record.fmt,
+            comments=comments,
+            write_dir='processed1'
+        )
+        lg.info("Entry created, starting next record")
 
-                recordPath.append(record_path)
-        
-lg.info(f'File name info extracted,{len(names)} records found ')
+    except Exception as e:
+        lg.error(f"Error filtering record {record_name}: {e}")
 
-lg.info("Starting signal processing")
-
-for i in range(100):
-    lg.info(f"Starting processing for {names[i]}")
-
-    record:Record=rdrecord(recordPath[i])
-    lg.info("Record extracted")
+def Denoise():
+    start = time.perf_counter()
+    lg.info('Starting extraction')
     
-    signal=record.to_dataframe()
-    sf=record.fs
+    lg.info("Opening Records File")
+    
+    with open(basePath + "RECORDS", 'r') as file:
+        file_paths = [line.strip() for line in file.readlines()]
 
-    lg.info("Denoising starting")
-    signal:pd.DataFrame=denoise(signal,sf)
-    signal=signal.to_numpy()
+    lg.info("File paths extracted", file_paths)
+    recordPath = []
+    names = []
 
-    lg.info("Denoising finished for signal, creating entry to directory")
+    lg.info('Starting File Name extraction')
+    for path in file_paths:
+        for root, dirs, files in os.walk(basePath + path):
+            for file in files:
+                if file.endswith(".mat"):
+                    record_name = os.path.splitext(file)[0]
+                    record_path = os.path.join(root, record_name)  # Use file here, not record_name
 
-    wrsamp(record_name=names[i],fs=sf,units=record.units,sig_name=record.sig_name,p_signal=signal,fmt=record.fmt,comments=record.comments,write_dir='./physionet-data/processed1')
-    lg.info("Entry created, starting next record")
+                    names.append(record_name)
+                    recordPath.append(record_path)
+    
+    lg.info(f'File name info extracted, {len(names)} records found')
 
+    lg.info("Starting signal processing")
 
-lg.info("Processing Complete")
-end=  time.perf_counter()
-lg.info(f'Signal processing complete for {len(names)} records in {end-start:.3f} time')
+    # Process records in parallel using a Pool
+    num_workers = mp.cpu_count()
+    with mp.Pool(num_workers) as pool:
+        pool.starmap(process_record, zip(recordPath, names))
 
+    lg.info("Processing Complete")
+    end = time.perf_counter()
+    lg.info(f'Signal processing complete for {len(names)} records in {end - start:.3f} seconds')
 
-
-
-
-
-
+if __name__=="__main__":
+    Denoise()

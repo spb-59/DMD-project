@@ -161,3 +161,14 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 physionet-data
+processed1
+features
+ptb-diagnostic-ecg-database-1.0.0
+processed2
+processed3
+processed4
+processed5
+ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3
+processedFullPaper
+processed6
+processed7
