@@ -46,6 +46,12 @@ def preprocess():
     lg.info(f'Starting processing with {num_workers} workers for MI...')
     with mp.Pool(num_workers) as pool:
         pool.starmap(process_record, zip(MI[:50], ['MI'] * 50))
+        lg.info(f'Starting processing with {num_workers} workers for MI...')
+    with mp.Pool(num_workers) as pool:
+        pool.starmap(process_record, zip(HC[:50], ['HC'] * 50))
+        lg.info(f'Starting processing with {num_workers} workers for MI...')
+    with mp.Pool(num_workers) as pool:
+        pool.starmap(process_record, zip(AFIB[:50], ['AFIB'] * 50))
 
 
 
@@ -80,7 +86,7 @@ def process_record(path, name):
             p_signal=signal.to_numpy(),  # Convert DataFrame to values
             fmt=record.fmt,
             comments=[name],
-            write_dir='processed5'
+            write_dir='processed7'
         )
         lg.info(f'Finished processing record {path}.')
     except Exception as e:

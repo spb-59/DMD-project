@@ -19,14 +19,20 @@ def preprocess():
     lg.info('Extracted file names from RECORDS')
 
     paths = [recordPath + path for path in file_paths]
+    paths=paths
     
     MI = []
     HC = []
     DR=[]
     BBB=[]
+    MH=[]
+    VHD=[]
+    MY=[]
+    MSC=[]
     for path in paths:
         record = rdrecord(path)
         cond = parseConditions(record)
+
         if cond == 'HC':
             HC.append(path)
             lg.info(f'Classified {path} as Healthy Control')
@@ -39,6 +45,18 @@ def preprocess():
         elif cond == 'BBB':
             BBB.append(path)
             lg.info(f'Classified {path} as Bundle Branch Block')
+        elif cond == 'MH':
+            MH.append(path)
+            lg.info(f'Classified {path} as Myocardial Hypertrophy')
+        elif cond == 'VHD':
+            VHD.append(path)
+            lg.info(f'Classified {path} as Valvular Heart Disease')
+        elif cond == 'MY':
+            MY.append(path)
+            lg.info(f'Classified {path} as Myocarditis')
+        else:
+            MSC.append(path)
+            lg.info(f'Classified {path} as MSC')
 
     num_workers = mp.cpu_count()
 
@@ -50,14 +68,25 @@ def preprocess():
     # lg.info(f'Starting processing with {num_workers} workers for MI...')
     # with mp.Pool(num_workers) as pool:
     #     pool.starmap(process_record, zip(MI[:50], ['MI'] * 50))
+    lg.info(len(MI)," THIS MUCH MI")
+    conditions = [
+        ('MI',MI),
+        ('HC',HC),
+        ('DR', DR),
+        ('BBB', BBB),
+        ('MH', MH),
+        ('VHD', VHD),
+        ('MY', MY),
+        ('MSC', MSC)
+    ]
 
-    lg.info(f'Starting processing with {num_workers} workers for DR...')
-    with mp.Pool(num_workers) as pool:
-        pool.starmap(process_record, zip(DR[:50], ['DR'] * 50))
+    # Start processing each condition in parallel
+    for cond_name, cond_list in conditions:
+        lg.info(f'Starting processing with {num_workers} workers for {cond_name}...')
+        with mp.Pool(num_workers) as pool:
+            pool.starmap(process_record, zip(cond_list, [cond_name] * len(cond_list)))
 
-    lg.info(f'Starting processing with {num_workers} workers for BBB...')
-    with mp.Pool(num_workers) as pool:
-        pool.starmap(process_record, zip(BBB[:50], ['BBB'] * 50))
+        lg.info(f'Finished processing for {cond_name}.')
 
     lg.info('Preprocessing completed.')
 
@@ -83,7 +112,7 @@ def process_record(path, name):
             p_signal=signal.to_numpy(),  # Convert DataFrame to values
             fmt=record.fmt,
             comments=[name],
-            write_dir='processed4'
+            write_dir='processedFullPaper'
         )
         lg.info(f'Finished processing record {path}.')
     except Exception as e:
@@ -91,7 +120,9 @@ def process_record(path, name):
 
 def parseConditions(record: Record):
     comment = record.comments
+    
     for c in comment:
+        
         if 'Myocardial infarction' in c:
             return 'MI'
         if 'Healthy control' in c:
@@ -100,7 +131,15 @@ def parseConditions(record: Record):
             return 'DR'
         if 'Bundle branch block' in c:
             return 'BBB'
-    return 'NA'
+        if 'Myocardial hypertrophy' in c:
+            return 'MH'
+        if 'Valvular heart disease' in c:
+            return 'VHD'
+        if 'Myocarditis' in c:
+            return 'MY'
+    return 'MSC'
+        
+
 
 if __name__ == '__main__':
     # Configure logging to both file and console
