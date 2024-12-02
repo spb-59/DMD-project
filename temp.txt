@@ -1,0 +1,45 @@
+
+CREATE TABLE Patient (
+    patientID CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    name VARCHAR(255),
+    DOB DATE,
+    contact VARCHAR(255)
+);
+
+CREATE TABLE Record (
+    recordID CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    patientID CHAR(36),
+    FOREIGN KEY (patientID) REFERENCES Patient(patientID)
+);
+
+
+CREATE TABLE Frame (
+    frameID CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    frameData BLOB, 
+    recordID CHAR(36),
+    FOREIGN KEY (recordID) REFERENCES Record(recordID)
+);
+
+-- Create the Features Table
+CREATE TABLE Feature (
+    featureID CHAR(36) PRIMARY KEY,
+    frameID CHAR(36),
+    FOREIGN KEY (frameID) REFERENCES Frame(frameID),
+    R_N FLOAT,
+    R_L FLOAT,
+    R_M FLOAT,
+    R_P FLOAT,
+    Lam_min FLOAT,
+    Lam_max FLOAT,
+    M_u FLOAT,
+    P_u FLOAT, 
+    M_s FLOAT, 
+    P_s FLOAT  
+);
+-- Create the Result Table
+CREATE TABLE Result (
+    resultID CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    resultData BLOB, 
+    featureID CHAR(36),
+    FOREIGN KEY (featureID) REFERENCES Features(featureID)
+);

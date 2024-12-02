@@ -5,5 +5,13 @@
         "pywt",
         "rdrecord",
         "wfdb"
-    ]
+    ],
+    "azureFunctions.deploySubpath": "app/DMDProject",
+    "azureFunctions.scmDoBuildDuringDeployment": true,
+    "azureFunctions.pythonVenv": "env",
+    "azureFunctions.projectLanguage": "Python",
+    "azureFunctions.projectRuntime": "~4",
+    "debug.internalConsoleOptions": "neverOpen",
+    "azureFunctions.projectLanguageModel": 2,
+    "azureFunctions.projectSubpath": "app/DMDProject"
 }
