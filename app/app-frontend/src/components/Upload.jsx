@@ -5,6 +5,7 @@ import axios from 'axios';
 import { ArrowLeft } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URI
+const CODE='?code='+import.meta.env.VITE_FUNCTION_KEY
 
 const Upload = ({ setUpload }) => {
   const [signalFile, setSignalFile] = useState(null);
@@ -52,7 +53,7 @@ const Upload = ({ setUpload }) => {
       try {
         setLoading(true);
         const res = await axios.post(
-          API_BASE+'/create_patient', 
+          API_BASE+'/create_patient'+CODE, 
           payload, 
           {
             headers: {
@@ -95,7 +96,7 @@ const Upload = ({ setUpload }) => {
     try {
       setLoading(true);
       const res = await axios.post(
-        API_BASE+'/insert_record',
+        API_BASE+'/insert_record'+CODE,
         formData,
         {
           headers: {

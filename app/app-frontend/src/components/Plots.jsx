@@ -6,6 +6,7 @@ import {ECGSig} from ".";
 import { ArrowLeft } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URI
+const CODE='&code='+import.meta.env.VITE_FUNCTION_KEY
 
 
 export default function Plots({ id,setBack }) {
@@ -19,7 +20,7 @@ export default function Plots({ id,setBack }) {
 const[save,setSave]=useState(true)
   const handleSave = async () => {
     try {
-      const response = await fetch(API_BASE+'/update_record_comment', {
+      const response = await fetch(API_BASE+'/update_record_comment'+CODE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -41,7 +42,7 @@ const[save,setSave]=useState(true)
   };
 
   useEffect(() => {
-    fetch(API_BASE+`/get_metric?record_id=${id}`, {
+    fetch(API_BASE+`/get_metric?record_id=${id}`+CODE, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -65,7 +66,9 @@ useEffect(()=>{
   setComment(record[1])
 },[record])
 if(!plots||!metric) {return( <>
-  Loading ...
+  <div className='w-[100vw] h-[100vh] flex items-center justify-center' >
+    <div className="w-3/4 h-3/4 animate-pulse bg-gray-100 "/>
+  </div>
 </>)}
 
 const _risk=['Low','Medium','High','Extreme']

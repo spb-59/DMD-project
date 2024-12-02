@@ -3,6 +3,7 @@ import { useState } from "react";
 import Plots from "./Plots";
 
 const API_BASE = import.meta.env.VITE_API_URI
+const CODE='?code='+import.meta.env.VITE_FUNCTION_KEY
 
 
 // eslint-disable-next-line react/prop-types
@@ -26,7 +27,7 @@ export default function Search({ setSearch }) {
 
     try {
 
-      const response = await fetch(API_BASE+`/get_search?q=${query}`);
+      const response = await fetch(API_BASE+`/get_search`+CODE+`&q=${query}`);
       const data = await response.json();
 
 
