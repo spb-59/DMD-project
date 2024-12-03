@@ -2,6 +2,7 @@
 import { useState,useEffect } from "react";
 import { ArrowRight,ArrowLeft } from "lucide-react";
 const API_BASE = import.meta.env.VITE_API_URI
+const CODE='?code='+import.meta.env.VITE_FUNCTION_KEY
 
 
 export default function ECGSig({plots,prediction,comments,date,id}) {
@@ -21,7 +22,7 @@ export default function ECGSig({plots,prediction,comments,date,id}) {
       }, [frame]);
     const handleSave = async () => {
         try {
-          const response = await fetch(API_BASE+'/update_frame_comment', {
+          const response = await fetch(API_BASE+'/update_frame_comment'+CODE, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

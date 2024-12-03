@@ -340,7 +340,7 @@ def get_metric(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.route(route="update_frame_comment", auth_level=func.AuthLevel.FUNCTION)
-def get_frame_comment(req: func.HttpRequest) -> func.HttpResponse:
+def update_frame_comment(req: func.HttpRequest) -> func.HttpResponse:
         try:
             request_body = req.get_json()
 
@@ -388,7 +388,7 @@ def get_frame_comment(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.route(route="update_record_comment", auth_level=func.AuthLevel.FUNCTION)
-def get_record_comment(req: func.HttpRequest) -> func.HttpResponse:
+def update_record_comment(req: func.HttpRequest) -> func.HttpResponse:
         try:
             request_body = req.get_json()
 

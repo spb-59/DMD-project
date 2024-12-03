@@ -6,7 +6,7 @@ import {ECGSig} from ".";
 import { ArrowLeft } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URI
-const CODE='&code='+import.meta.env.VITE_FUNCTION_KEY
+const CODE='?code='+import.meta.env.VITE_FUNCTION_KEY
 
 
 export default function Plots({ id,setBack }) {
@@ -42,7 +42,7 @@ const[save,setSave]=useState(true)
   };
 
   useEffect(() => {
-    fetch(API_BASE+`/get_metric?record_id=${id}`+CODE, {
+    fetch(API_BASE+`/get_metric`+CODE+`&record_id=${id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
