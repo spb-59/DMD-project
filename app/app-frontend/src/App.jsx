@@ -16,8 +16,9 @@ export default function App() {
 
   return(
 <main className="flex flex-col items-center justify-center min-h-[100vh]">
+<img src="/blue2.jpg" className="  h-auto  w-full absolute -z-50 opacity-50" />
 <h1 className="font-bold text-[72px] text-center relative ">
-  <img src="/trans.gif" className="  h-auto  absolute top-[-30px] -z-50" />
+  
   ECG prediction system
 </h1>
 <div className="flex gap-2 items-center justify-center">
